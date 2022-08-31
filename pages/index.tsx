@@ -1,15 +1,31 @@
 import type { NextPage } from "next";
 import Head from "next/head";
 import styles from "../styles/Home.module.css";
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
+import io from "socket.io-client";
 
-const Home: NextPage = () => {
+const Home: NextPage = (): JSX.Element => {
+  const [locations, setLocations] = useState("");
+
   useEffect(() => {
-    navigator.geolocation.getCurrentPosition(function (position) {
-      console.log("Latitude is :", position.coords.latitude);
-      console.log("Longitude is :", position.coords.longitude);
+    socketInitializer();
+  }, []);
+
+  const socketInitializer = async () => {
+    await fetch("/api/hello"); // connect to API
+    let socket = io();
+
+    // Get user geolocation
+    navigator.geolocation.getCurrentPosition((position): void => {
+      let location: string = `${position.coords.latitude}, ${position.coords.longitude}`;
+      socket.emit("other-locations", location); // send geolocation to socket
     });
-  });
+
+    // Get other's geolocation
+    socket.on("update-locations", (msg): void => {
+      setLocations(msg);
+    });
+  };
 
   return (
     <div className={styles.container}>
@@ -24,9 +40,7 @@ const Home: NextPage = () => {
         <h1 className={styles.title}>Welcome to Next.js!</h1>
 
         <div className={styles.grid}>
-          <p className={styles.card}>
-            Find in-depth information about Next.js features and API.
-          </p>
+          <p className={styles.card}>{locations}</p>
 
           <p className={styles.card}>
             Learn about Next.js in an interactive course with quizzes!

@@ -1,13 +1,17 @@
-// Next.js API route support: https://nextjs.org/docs/api-routes/introduction
-import type { NextApiRequest, NextApiResponse } from "next";
+import { Server } from "socket.io";
 
-type Data = {
-  name: string;
+const SocketHandler = (req, res): void => {
+  if (!res.socket.server.io) {
+    const io = new Server(res.socket.server);
+    res.socket.server.io = io;
+
+    io.on("connection", (socket): void => {
+      socket.on("other-locations", (msg): void => {
+        socket.broadcast.emit("update-locations", msg);
+      });
+    });
+  }
+  res.end();
 };
 
-export default function handler(
-  req: NextApiRequest,
-  res: NextApiResponse<Data>
-) {
-  res.status(200).json({ name: "John Doe" });
-}
+export default SocketHandler;
