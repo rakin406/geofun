@@ -4,28 +4,69 @@ import styles from "../styles/Home.module.css";
 import React, { useEffect, useState } from "react";
 import io from "socket.io-client";
 
+const socket = io();
+
 const Home: NextPage = (): JSX.Element => {
-  const [locations, setLocations] = useState("");
+  const [isConnected, setIsConnected] = useState(socket.connected);
+  const [locations, setLocations] = useState<string[]>([]);
 
   useEffect(() => {
     socketInitializer();
-  }, []);
+  });
 
   const socketInitializer = async () => {
     await fetch("/api/hello"); // connect to API
-    let socket = io();
 
-    // Get user geolocation
-    navigator.geolocation.getCurrentPosition((position): void => {
-      let location: string = `${position.coords.latitude}, ${position.coords.longitude}`;
-      socket.emit("other-locations", location); // send geolocation to socket
+    socket.on("connect", () => {
+      setIsConnected(true);
     });
 
-    // Get other's geolocation
-    socket.on("update-locations", (msg): void => {
-      setLocations(msg);
+    socket.on("disconnect", () => {
+      setIsConnected(false);
     });
+
+    const success = (pos: {
+      coords: { latitude: any; longitude: any };
+    }): void => {
+      var crd = pos.coords;
+
+      const userLocation: string = `${crd.latitude}, ${crd.longitude}`;
+      console.log(userLocation);  // debugging
+
+      // Get other's geolocation
+      socket.on("update-locations", (msg): void => {
+        // Ensure that the response is not my location
+        if (msg != userLocation) {
+          setLocations([...locations, msg]);
+        }
+      });
+
+      // Send user geolocation to socket
+      socket.emit("other-locations", userLocation);
+    };
+
+    const error = (err: { code: any; message: any }): void => {
+      console.warn(`ERROR(${err.code}): ${err.message}`);
+      navigator.geolocation.clearWatch(id);
+    };
+
+    // Configure geolocation for high accuracy
+    const options = {
+      enableHighAccuracy: true,
+      timeout: 5000,
+      maximumAge: 0
+    };
+
+    // Start recording user geolocation
+    let id = navigator.geolocation.watchPosition(success, error, options);
   };
+
+  // Contain all the locations as HTML content
+  const locationsInHtml = locations.map((value) => (
+    <p key={value} className={styles.card}>
+      {value}
+    </p>
+  ));
 
   return (
     <div className={styles.container}>
@@ -39,21 +80,7 @@ const Home: NextPage = (): JSX.Element => {
       <main className={styles.main}>
         <h1 className={styles.title}>Welcome to Next.js!</h1>
 
-        <div className={styles.grid}>
-          <p className={styles.card}>{locations}</p>
-
-          <p className={styles.card}>
-            Learn about Next.js in an interactive course with quizzes!
-          </p>
-
-          <p className={styles.card}>
-            Discover and deploy boilerplate example Next.js projects.
-          </p>
-
-          <p className={styles.card}>
-            Instantly deploy your Next.js site to a public URL with Vercel.
-          </p>
-        </div>
+        <div className={styles.grid}>{locationsInHtml}</div>
       </main>
     </div>
   );
