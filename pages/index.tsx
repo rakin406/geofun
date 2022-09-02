@@ -30,6 +30,7 @@ function deg2rad(deg: number): number {
   return deg * (Math.PI / 180);
 }
 
+// FIX: Calculate steps properly and get proper result
 // Calculate steps from distance
 function calculateSteps(distance: number): number {
   // 1 km -> 1408 steps
@@ -105,6 +106,7 @@ const Home: NextPage = (): JSX.Element => {
     let id = navigator.geolocation.watchPosition(success, error, options);
   };
 
+  // FIX: Do not duplicate boxes
   // Contain all the steps as HTML content
   const stepsInHtml = steps.map((value) => (
     <p key={value} className={styles.card}>
