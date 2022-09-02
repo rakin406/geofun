@@ -50,7 +50,8 @@ const Home: NextPage = (): JSX.Element => {
   });
 
   const socketInitializer = async () => {
-    await fetch("/api/hello"); // connect to API
+    // Connect to API
+    await fetch("/api/location");
 
     socket.on("connect", () => {
       setIsConnected(true);
