@@ -6,9 +6,43 @@ import io from "socket.io-client";
 
 const socket = io();
 
+function getDistanceFromLatLonInKm(
+  lat1: number,
+  lon1: number,
+  lat2: number,
+  lon2: number
+): number {
+  var R = 6371; // Radius of the earth in km
+  var dLat = deg2rad(lat2 - lat1); // deg2rad below
+  var dLon = deg2rad(lon2 - lon1);
+  var a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(deg2rad(lat1)) *
+      Math.cos(deg2rad(lat2)) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+  var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  var d = R * c; // Distance in km
+  return d;
+}
+
+function deg2rad(deg: number): number {
+  return deg * (Math.PI / 180);
+}
+
+// Calculate steps from distance
+function calculateSteps(distance: number): number {
+  // 1 km -> 1408 steps
+  // x km -> 1408 * x
+  // steps = 1408x steps
+  const averageSteps: number = 1408;
+  const steps: number = Math.round(averageSteps * distance);
+  return steps;
+}
+
 const Home: NextPage = (): JSX.Element => {
   const [isConnected, setIsConnected] = useState(socket.connected);
-  const [locations, setLocations] = useState<string[]>([]);
+  const [steps, setSteps] = useState<number[]>([]);
 
   useEffect(() => {
     socketInitializer();
@@ -30,14 +64,24 @@ const Home: NextPage = (): JSX.Element => {
     }): void => {
       var crd = pos.coords;
 
-      const userLocation: string = `${crd.latitude}, ${crd.longitude}`;
-      console.log(userLocation);  // debugging
+      const userLocation = { lat: crd.latitude, long: crd.longitude };
+      // console.log(userLocation); // debugging
 
       // Get other's geolocation
       socket.on("update-locations", (msg): void => {
         // Ensure that the response is not my location
-        if (msg != userLocation) {
-          setLocations([...locations, msg]);
+        if (JSON.stringify(msg) !== JSON.stringify(userLocation)) {
+          // Find difference in distance
+          const distance: number = getDistanceFromLatLonInKm(
+            userLocation.lat,
+            userLocation.long,
+            msg.lat,
+            msg.long
+          );
+          // Find the number of steps
+          const amountOfSteps: number = calculateSteps(distance);
+          // Update steps
+          setSteps([...steps, amountOfSteps]);
         }
       });
 
@@ -61,10 +105,10 @@ const Home: NextPage = (): JSX.Element => {
     let id = navigator.geolocation.watchPosition(success, error, options);
   };
 
-  // Contain all the locations as HTML content
-  const locationsInHtml = locations.map((value) => (
+  // Contain all the steps as HTML content
+  const stepsInHtml = steps.map((value) => (
     <p key={value} className={styles.card}>
-      {value}
+      {value} steps
     </p>
   ));
 
@@ -80,7 +124,7 @@ const Home: NextPage = (): JSX.Element => {
       <main className={styles.main}>
         <h1 className={styles.title}>Welcome to Next.js!</h1>
 
-        <div className={styles.grid}>{locationsInHtml}</div>
+        <div className={styles.grid}>{stepsInHtml}</div>
       </main>
     </div>
   );
