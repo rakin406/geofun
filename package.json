@@ -1,9 +1,9 @@
 {
-  "name": "geolocate",
+  "name": "geofun",
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "local-ssl-proxy --source 3000 --target 3001 & next dev -p 3001",
+    "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "next lint"
